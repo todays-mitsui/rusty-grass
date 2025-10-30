@@ -1,13 +1,12 @@
 use crate::ast;
+use combine::stream::Stream;
 use combine::stream::position::{SourcePosition, Stream as PositionStream};
-use combine::stream::{Positioned, Stream};
-use combine::{ParseError, Parser, many1, none_of, one_of, position, skip_many};
+use combine::{Parser, many1, none_of, one_of, optional, position, skip_many};
 use std::iter;
 
 fn white_space<Input>() -> impl Parser<Input, Output = ()>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     skip_many(none_of("wWvｗＷｖ".chars()))
 }
@@ -15,7 +14,6 @@ where
 fn head_white_space<Input>() -> impl Parser<Input, Output = ()>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     skip_many(none_of("wｗ".chars()))
 }
@@ -23,7 +21,6 @@ where
 fn char_w<Input>() -> impl Parser<Input, Output = char>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     one_of("wｗ".chars()).skip(white_space()).map(|_| 'w')
 }
@@ -31,7 +28,6 @@ where
 fn char_W<Input>() -> impl Parser<Input, Output = char>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     one_of("WＷ".chars()).skip(white_space()).map(|_| 'W')
 }
@@ -39,7 +35,6 @@ where
 fn char_v<Input>() -> impl Parser<Input, Output = char>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     one_of("vｖ".chars()).skip(white_space()).map(|_| 'v')
 }
@@ -78,7 +73,7 @@ fn prog<'a>() -> impl Parser<PositionStream<&'a str, SourcePosition>, Output = a
     let head = abs().map(ast::Top::Abs);
 
     let top = abs().map(ast::Top::Abs).or(app().map(ast::Top::App));
-    let tail = many1::<Vec<_>, _, _>(char_v().with(top));
+    let tail = many1::<Vec<_>, _, _>(optional(char_v()).with(top));
 
     (head_white_space(), head, tail).map(|(_, head, tail)| {
         // 先頭が head, それに tail が続く Vec<ast::Top> を作る
@@ -162,11 +157,11 @@ mod tests {
 
     #[test]
     fn test_prog() {
-        let input = "wWWwwwvWWWWwwwwwvwwWwwWWWwwwwwWWWWWwwwwww";
+        let input = "wWWwwwvWWWWwwwwwWWwvwwWwwWWWwwwwwWWWWWwwwwww";
         let result = prog().parse(PositionStream::new(input));
         assert!(result.is_ok());
         let (prog, _) = result.unwrap();
-        assert_eq!(prog.items.len(), 3);
+        assert_eq!(prog.items.len(), 4);
         assert_eq!(
             prog.items[0],
             ast::Top::Abs(ast::Abs {
@@ -197,10 +192,27 @@ mod tests {
                         column: 17
                     }
                 }
-            })
+            }),
         );
         assert_eq!(
             prog.items[2],
+            ast::Top::App(ast::App {
+                func_idx: 2,
+                arg_idx: 1,
+                range: ast::SourceRange {
+                    start: SourcePosition {
+                        line: 1,
+                        column: 17
+                    },
+                    end: SourcePosition {
+                        line: 1,
+                        column: 20
+                    }
+                }
+            }),
+        );
+        assert_eq!(
+            prog.items[3],
             ast::Top::Abs(ast::Abs {
                 arity: 2,
                 body: vec![
@@ -210,11 +222,11 @@ mod tests {
                         range: ast::SourceRange {
                             start: SourcePosition {
                                 line: 1,
-                                column: 20
+                                column: 23
                             },
                             end: SourcePosition {
                                 line: 1,
-                                column: 23
+                                column: 26
                             }
                         }
                     },
@@ -224,11 +236,11 @@ mod tests {
                         range: ast::SourceRange {
                             start: SourcePosition {
                                 line: 1,
-                                column: 23
+                                column: 26
                             },
                             end: SourcePosition {
                                 line: 1,
-                                column: 31
+                                column: 34
                             }
                         }
                     },
@@ -238,11 +250,11 @@ mod tests {
                         range: ast::SourceRange {
                             start: SourcePosition {
                                 line: 1,
-                                column: 31
+                                column: 34
                             },
                             end: SourcePosition {
                                 line: 1,
-                                column: 42
+                                column: 45
                             }
                         }
                     }
@@ -250,11 +262,11 @@ mod tests {
                 range: ast::SourceRange {
                     start: SourcePosition {
                         line: 1,
-                        column: 18
+                        column: 21
                     },
                     end: SourcePosition {
                         line: 1,
-                        column: 42
+                        column: 45
                     }
                 }
             })
