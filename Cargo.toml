@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 combine = "4.6.7"
+thiserror = "2.0.17"
