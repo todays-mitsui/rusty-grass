@@ -1,4 +1,4 @@
-mod ast;
-mod ir;
-mod parser;
-mod vm;
+pub mod ast;
+pub mod ir;
+pub mod parser;
+pub mod vm;

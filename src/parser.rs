@@ -1,8 +1,20 @@
 use crate::ast;
 use combine::stream::Stream;
 use combine::stream::position::{SourcePosition, Stream as PositionStream};
-use combine::{Parser, many1, none_of, one_of, optional, position, skip_many};
+use combine::{
+    Parser, error::StringStreamError, many, many1, none_of, one_of, optional, position, skip_many,
+};
 use std::iter;
+
+pub fn parse_prog(input: &str) -> Result<ast::Prog, StringStreamError> {
+    let stream = PositionStream::new(input);
+    match prog().parse(stream) {
+        Ok((prog, _remaining_input)) => Ok(prog),
+        Err(err) => Err(err),
+    }
+}
+
+// ========================================================================== //
 
 fn white_space<Input>() -> impl Parser<Input, Output = ()>
 where
@@ -25,6 +37,7 @@ where
     one_of("wｗ".chars()).skip(white_space()).map(|_| 'w')
 }
 
+#[allow(non_snake_case)]
 fn char_W<Input>() -> impl Parser<Input, Output = char>
 where
     Input: Stream<Token = char>,
@@ -73,7 +86,7 @@ fn prog<'a>() -> impl Parser<PositionStream<&'a str, SourcePosition>, Output = a
     let head = abs().map(ast::Top::Abs);
 
     let top = abs().map(ast::Top::Abs).or(app().map(ast::Top::App));
-    let tail = many1::<Vec<_>, _, _>(optional(char_v()).with(top));
+    let tail = many::<Vec<_>, _, _>(optional(char_v()).with(top));
 
     (head_white_space(), head, tail).map(|(_, head, tail)| {
         // 先頭が head, それに tail が続く Vec<ast::Top> を作る
