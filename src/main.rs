@@ -45,7 +45,8 @@ fn init_trace() {
         .with_target(false) // target表示不要なら
         .with_file(false)
         .with_line_number(false)
-        .with_thread_ids(false);
+        .with_thread_ids(false)
+        .with_writer(std::io::stderr);
 
     tracing_subscriber::registry()
         .with(filter)

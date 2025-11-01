@@ -1,16 +1,14 @@
 use crate::ast::Prog;
 use crate::ir::{self, Prim, Value};
+use crate::pp::PP;
 use std::collections::VecDeque;
 use std::io::Read;
 use std::num::NonZeroUsize;
-use std::rc::Rc;
 use thiserror::Error;
-use tracing::info;
+use tracing::debug;
 
 pub struct VM {
-    code: ir::Code,
-    env: Rc<ir::Env>,
-    dump: Vec<ir::Frame>,
+    state: ir::State,
 }
 
 #[derive(Debug, Error)]
@@ -26,43 +24,44 @@ pub enum RuntimeError {
 impl VM {
     pub fn new(prog: &Prog) -> Self {
         let code0 = ir::Code::from(prog);
-        info!("code0: {:#?}", code0);
 
         let env0 = ir::Env::nil()
             .push(Value::Prim(Prim::In))
             .push(Value::Char(b'w'))
             .push(Value::Prim(Prim::Succ))
             .push(Value::Prim(Prim::Out));
-        info!("env0: {:#?}", env0);
 
         let dump0 = vec![ir::Frame {
             code: VecDeque::new(),
             env: ir::Env::nil(),
         }];
-        info!("dump0: {:#?}", dump0);
 
-        Self {
+        let state = ir::State {
             code: code0,
             env: env0,
             dump: dump0,
-        }
+        };
+
+        debug!("init: {:?}", PP(&state));
+
+        Self { state }
     }
 
     pub fn run(&mut self) -> Result<(), RuntimeError> {
         loop {
-            info!(
-                "loop: state: {{ code: {:#?}, env: {:#?}, dump: {:#?} }}",
-                self.code, self.env, self.dump
-            );
-            match self.code.pop_front() {
+            debug!("loop: {:?}", PP(&self.state));
+
+            match self.state.code.pop_front() {
                 Some(instr) => match instr {
                     ir::Instr::App { func_idx, arg_idx } => {
                         let ff = self
+                            .state
                             .env
                             .get(func_idx)
                             .ok_or_else(|| RuntimeError::IndexOutOfBounds(func_idx))
                             .cloned()?;
                         let fa = self
+                            .state
                             .env
                             .get(arg_idx)
                             .ok_or_else(|| RuntimeError::IndexOutOfBounds(arg_idx))
@@ -71,35 +70,37 @@ impl VM {
                     }
                     ir::Instr::Abs { arity, body } => {
                         if arity.get() == 1 {
-                            self.env = self.env.push(Value::Closure {
+                            self.state.env = self.state.env.push(Value::Closure {
                                 code: body,
-                                env: self.env.clone(),
+                                env: self.state.env.clone(),
                             });
                         } else {
                             let decrement = ir::Instr::Abs {
                                 arity: NonZeroUsize::new(arity.get() - 1).unwrap(),
                                 body,
                             };
-                            self.env = self.env.push(Value::Closure {
+                            self.state.env = self.state.env.push(Value::Closure {
                                 code: VecDeque::from(vec![decrement]),
-                                env: self.env.clone(),
+                                env: self.state.env.clone(),
                             });
                         }
                     }
                 },
                 None => {
-                    if let Some(frame) = self.dump.pop() {
+                    if let Some(frame) = self.state.dump.pop() {
                         let return_value = self
+                            .state
                             .env
                             .get(NonZeroUsize::new(1).unwrap())
                             .cloned()
                             .ok_or_else(|| RuntimeError::IllegalState)?;
-                        self.code = frame.code;
-                        self.env = frame.env.push(return_value);
+                        self.state.code = frame.code;
+                        self.state.env = frame.env.push(return_value);
                         continue;
                     }
 
                     let result_value = self
+                        .state
                         .env
                         .get(NonZeroUsize::new(1).unwrap())
                         .cloned()
@@ -107,8 +108,8 @@ impl VM {
                     let self_value = result_value.clone();
                     match result_value {
                         Value::Closure { code, env } => {
-                            self.code = code;
-                            self.env = env.push(self_value);
+                            self.state.code = code;
+                            self.state.env = env.push(self_value);
                             continue;
                         }
                         _ => return Ok(()),
@@ -119,59 +120,58 @@ impl VM {
     }
 
     fn call(&mut self, func: Value, arg: Value) -> Result<(), RuntimeError> {
-        info!("call: func: {:#?}, arg: {:#?}", func, arg);
+        debug!("call: func: {:?}, arg: {:?}", PP(&func), PP(&arg));
         match func {
             Value::Char(expected) => {
                 let return_value = match arg {
                     Value::Char(actual) if expected == actual => church_true(),
                     _ => church_false(),
                 };
-                self.env = self.env.push(return_value);
+                self.state.env = self.state.env.push(return_value);
             }
             Value::Closure { code, env } => {
                 let frame = ir::Frame {
-                    code: std::mem::take(&mut self.code),
-                    env: std::mem::take(&mut self.env),
+                    code: std::mem::take(&mut self.state.code),
+                    env: std::mem::take(&mut self.state.env),
                 };
-                self.dump.push(frame);
+                self.state.dump.push(frame);
 
-                self.code = code;
-                self.env = env.push(arg);
+                self.state.code = code;
+                self.state.env = env.push(arg);
             }
             Value::Prim(prim) => {
-                let result_value = self.call_prim(prim, arg)?;
-                self.env = self.env.push(result_value);
+                let result_value = match prim {
+                    Prim::In => {
+                        let mut buf = [0u8; 1];
+                        match std::io::stdin().read(&mut buf) {
+                            Ok(1) => {
+                                debug!("io: stdin: byte={} {:?}", buf[0], buf[0] as char);
+                                Value::Char(buf[0])
+                            }
+                            _ => arg,
+                        }
+                    }
+                    Prim::Succ => {
+                        if let Value::Char(char) = arg {
+                            Value::Char(char.wrapping_add(1))
+                        } else {
+                            return Err(RuntimeError::NotAChar(arg));
+                        }
+                    }
+                    Prim::Out => {
+                        if let Value::Char(c) = arg {
+                            print!("{}", c as char);
+                            debug!("io: stdout: byte={} {:?}", c, c as char);
+                            arg
+                        } else {
+                            return Err(RuntimeError::NotAChar(arg));
+                        }
+                    }
+                };
+                self.state.env = self.state.env.push(result_value);
             }
         }
         Ok(())
-    }
-
-    fn call_prim(&mut self, prim: Prim, arg: Value) -> Result<Value, RuntimeError> {
-        info!("call_prim: prim: {:#?}, arg: {:#?}", prim, arg);
-        match prim {
-            Prim::In => {
-                let mut buf = [0u8; 1];
-                match std::io::stdin().read(&mut buf) {
-                    Ok(1) => Ok(Value::Char(buf[0])),
-                    _ => Ok(arg),
-                }
-            }
-            Prim::Succ => {
-                if let Value::Char(char) = arg {
-                    Ok(Value::Char(char.wrapping_add(1)))
-                } else {
-                    Err(RuntimeError::NotAChar(arg))
-                }
-            }
-            Prim::Out => {
-                if let Value::Char(c) = arg {
-                    print!("{}", c as char);
-                    Ok(arg)
-                } else {
-                    Err(RuntimeError::NotAChar(arg))
-                }
-            }
-        }
     }
 }
 

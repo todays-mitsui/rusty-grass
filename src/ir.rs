@@ -46,7 +46,7 @@ pub struct Frame {
 #[derive(Debug, Clone)]
 pub struct State {
     pub code: Code,
-    pub env: Env,
+    pub env: Rc<Env>,
     pub dump: Vec<Frame>,
 }
 
