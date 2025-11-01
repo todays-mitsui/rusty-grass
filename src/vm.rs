@@ -5,6 +5,7 @@ use std::io::Read;
 use std::num::NonZeroUsize;
 use std::rc::Rc;
 use thiserror::Error;
+use tracing::info;
 
 pub struct VM {
     code: ir::Code,
@@ -25,20 +26,20 @@ pub enum RuntimeError {
 impl VM {
     pub fn new(prog: &Prog) -> Self {
         let code0 = ir::Code::from(prog);
-        println!("code0: {:#?}", code0);
+        info!("code0: {:#?}", code0);
 
         let env0 = ir::Env::nil()
             .push(Value::Prim(Prim::In))
             .push(Value::Char(b'w'))
             .push(Value::Prim(Prim::Succ))
             .push(Value::Prim(Prim::Out));
-        println!("env0: {:#?}", env0);
+        info!("env0: {:#?}", env0);
 
         let dump0 = vec![ir::Frame {
             code: VecDeque::new(),
             env: ir::Env::nil(),
         }];
-        println!("dump0: {:#?}", dump0);
+        info!("dump0: {:#?}", dump0);
 
         Self {
             code: code0,
@@ -49,7 +50,7 @@ impl VM {
 
     pub fn run(&mut self) -> Result<(), RuntimeError> {
         loop {
-            println!(
+            info!(
                 "loop: state: {{ code: {:#?}, env: {:#?}, dump: {:#?} }}",
                 self.code, self.env, self.dump
             );
@@ -118,7 +119,7 @@ impl VM {
     }
 
     fn call(&mut self, func: Value, arg: Value) -> Result<(), RuntimeError> {
-        println!("call: func: {:#?}, arg: {:#?}", func, arg);
+        info!("call: func: {:#?}, arg: {:#?}", func, arg);
         match func {
             Value::Char(expected) => {
                 let return_value = match arg {
@@ -146,7 +147,7 @@ impl VM {
     }
 
     fn call_prim(&mut self, prim: Prim, arg: Value) -> Result<Value, RuntimeError> {
-        println!("call_prim: prim: {:#?}, arg: {:#?}", prim, arg);
+        info!("call_prim: prim: {:#?}, arg: {:#?}", prim, arg);
         match prim {
             Prim::In => {
                 let mut buf = [0u8; 1];
