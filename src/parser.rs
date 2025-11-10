@@ -70,7 +70,7 @@ fn app<'a>() -> impl Parser<PositionStream<&'a str, SourcePosition>, Output = as
 
 fn abs<'a>() -> impl Parser<PositionStream<&'a str, SourcePosition>, Output = ast::Abs> {
     let arity = many1::<Vec<_>, _, _>(char_w()).map(|ws| ws.len());
-    let body = many1(app());
+    let body = many(app());
 
     (position(), arity, body, position()).map(|(start_pos, arity, body, end_pos)| ast::Abs {
         arity,

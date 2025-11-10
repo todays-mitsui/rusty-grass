@@ -1,0 +1,107 @@
+// In
+// _grass_
+// Succ
+// Out
+
+// λm.λn.λf.λx.m f (n f x)
+wwww WWWWww WWWWwww Wwww WWWw                                                   v // add
+// λm.λ.n.λf.m (n f)
+www WWw WWWWw                                                                   v // times
+
+// λf.λx.f (f x)
+ww WWw WWWw                                                                     v // 2
+// λf.λx.f (f (f x))
+ww WWw WWWw WWWWw                                                               v // 3
+// λf.λx.f (f (f (f (f x))))
+ww WWw WWWw WWWWw WWWWWw WWWWWWw                                                v // 5
+
+w
+  WWWWWW wwww /* add 2 */
+  W      www  /* _   5 */                                                       v // const 7
+Ww                                                                              v // 7
+WWWW wwwww /* 3 2 = 2^3 => 8 */                                                 v // 8
+w
+  WWWWWWWWW   wwwww     /* add 5 */
+  W           wwwwwww   /* _   3 */
+  WWWWWWWWWWW w         /* add _ */
+  W           wwwwwwwww /* _   3 */                                             v // const 11
+Ww                                                                              v // 11
+w
+  WWWWWWWWWWW ww  /* add 11 */
+  W           www /* _   11 */                                                  v // const 22
+Ww                                                                              v // 22
+w
+  WWWWWWWWWWWW   wwwwwwwwwww  /* times 2 */
+  W              wwwwwwwwwwww /* _     2 */
+  WWWWWWWWWWWWWW w            /* times _ */
+  W              wwwwwwwwww   /* _     7 */                                     v // const 28
+Ww                                                                              v // 28
+w
+  WWWWWWWWWWWW     wwwwwwwwwww /* 3    5 */
+  WWWWWWWWWWWWWWWW w           /* add  _ */
+  W                wwwwww      /* _   22 */                                     v // const 147
+Ww                                                                              v // 147
+
+w
+  WW wwwwwwwwwwwwwwwwwww   /* 147 Succ    */
+  W  wwwwwwwwwwwwwwwwwwwww /* _   _grass_ */                                    v // const \n
+w
+  WW                      w                      /* \n              */
+  WWWWWWWWWWWWWWWWWWWWW   w                      /* Succ \n   => VT */
+  WWWWWWWWW               wwwwwwwwwwwwwwwwwwwwww /* 22   Succ       */
+  W                       ww                     /* _    VT   => !  */          v // const !
+w
+  WW          w                      /* !            */
+  WWWWWWWWWWW wwwwwwwwwwwwwwwwwwwwww /* 11 Succ      */
+  W           ww                     /* _  !    => , */                         v // const ,
+w
+  WW       w                       /* ,            */
+  WWWWWWWW wwwwwwwwwwwwwwwwwwwwwww /* 28 Succ      */
+  W        ww                      /* _  ,    => H */                           v // const H
+w
+  WW          w                        /* H            */
+  WWWWWWWWW   wwwwwwwwwwwwwwwwwwwwwwww /* 28 Succ      */
+  W           ww                       /* _  H    => d */                       v // const d
+w
+  WW                        w /* d */
+  WWWWWWWWWWWWWWWWWWWWWWWWW w /* Succ _ => e */                                 v // const e
+w
+  WWW               w                          /* d           */
+  WWWWWWWWWWWWWWWWW wwwwwwwwwwwwwwwwwwwwwwwwww /* 8 Succ      */
+  W                 ww                         /* _ d    => l */                v // const l
+w
+  WW                     w                           /* l           */
+  WWWWWWWWWWWWWWWWWWWWWW wwwwwwwwwwwwwwwwwwwwwwwwwww /* 3 Succ      */
+  W                 ww                               /* _ l    => o */          v // const o
+w
+  WW                      w                            /* o           */
+  WWWWWWWWWWWWWWWWWWWWWWW wwwwwwwwwwwwwwwwwwwwwwwwwwww /* 3 Succ      */
+  W                       ww                           /* _ o    => r */        v // const r
+
+w
+  WWWWWWWWWWWWWWWWWWWWWWWWWWW w /* Out _arg1_ */                                v // Out
+
+// main
+w
+  WWWWWWWW                        w                                             /* H           */
+  WWW                             w                                             /* Out H       */
+  WWWWWWWW                        w                                             /* e           */
+  WWWWW                           w                                             /* Out e       */
+  WWWWWWWWW                       w                                             /* l           */
+  WWWWWWW                         w                                             /* Out l       */
+  WWWWWWWW                        w                                             /* Out l       */
+  WWWWWWWWWWW                     w                                             /* o           */
+  WWWWWWWWWW                      w                                             /* Out o       */
+  WWWWWWWWWWWWWWWWWW              w                                             /* ,           */
+  WWWWWWWWWWWW                    w                                             /* Out ,       */
+  WWWWWWWWWWWWW                   wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww     /* Out _grass_ */
+  WWWWWWWWWWWWWW                  wwww                                          /* Out o       */
+  WWWWWWWWWWWWWWWW                w                                             /* r           */
+  WWWWWWWWWWWWWWWW                w                                             /* Out r       */
+  WWWWWWWWWWWWWWWWW               wwwwwwwww                                     /* Out l       */
+  WWWWWWWWWWWWWWWWWWWWWWW         w                                             /* d           */
+  WWWWWWWWWWWWWWWWWWW             w                                             /* Out d       */
+  WWWWWWWWWWWWWWWWWWWWWWWWWWWW    w                                             /* !           */
+  WWWWWWWWWWWWWWWWWWWWW           w                                             /* Out !       */
+  WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW w                                             /* \n          */
+  WWWWWWWWWWWWWWWWWWWWWWW         w                                             /* Out \n      */
