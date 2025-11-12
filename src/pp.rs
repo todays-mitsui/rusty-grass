@@ -16,9 +16,20 @@ impl<'a> Debug for PP<'a, State> {
 
 impl<'a> Debug for PP<'a, Code> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_list()
-            .entries(self.0.iter().map(|instr| PP(instr)))
-            .finish()
+        let mut list = f.debug_list();
+        let mut iter = self.0.iter();
+        // 高々3要素まで表示し、残りがあれば省略表示する
+        for _ in 0..3 {
+            if let Some(instr) = iter.next() {
+                list.entry(&PP(instr));
+            } else {
+                break;
+            }
+        }
+        if iter.next().is_some() {
+            list.entry(&Ellipsis);
+        }
+        list.finish()
     }
 }
 
@@ -45,6 +56,11 @@ impl<'a> Debug for PP<'a, Rc<Env>> {
         let mut list = f.debug_list();
         let mut index = 1;
         while let Env::Node(v, next) = env {
+            // 高々3要素まで表示し、残りがあれば省略表示する
+            if index > 3 {
+                list.entry(&Ellipsis);
+                break;
+            }
             list.entry(&PP(&(index, v)));
             env = next.as_ref();
             index += 1;
@@ -99,5 +115,13 @@ impl<'a> Debug for PP<'a, Prim> {
             Prim::Succ => write!(f, "Succ"),
             Prim::Out => write!(f, "Out"),
         }
+    }
+}
+
+struct Ellipsis;
+
+impl Debug for Ellipsis {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "...")
     }
 }

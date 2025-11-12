@@ -39,10 +39,10 @@ fn init_trace() {
     let filter = EnvFilter::new("debug");
 
     let fmt_layer = tracing_subscriber::fmt::layer()
-        .compact() // 1行・省スペース
+        .compact() // 1行表示
         .with_level(false)
-        .with_ansi(false) // 色なし（ファイル向き）
-        .with_target(false) // target表示不要なら
+        .with_ansi(false) // 色無し
+        .with_target(false) // target表示無し
         .with_file(false)
         .with_line_number(false)
         .with_thread_ids(false)
