@@ -1,5 +1,7 @@
 [package]
 name = "rusty-grass"
+authors = ["Mitsui <todays.mitsui@gmail.com>"]
+description = "Grass interpreter written in Rust."
 version = "0.1.0"
 edition = "2024"
 

@@ -7,15 +7,20 @@ use tracing_subscriber::EnvFilter;
 use tracing_subscriber::prelude::*;
 
 #[derive(Parser, Debug)]
+#[clap(
+    version = env!("CARGO_PKG_VERSION"),
+    author = env!("CARGO_PKG_AUTHORS"),
+    about = env!("CARGO_PKG_DESCRIPTION"),
+)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     #[arg(short, long, default_value_t = false)]
     verbose: bool,
 
-    #[arg(short, long, default_value = None)]
+    #[arg(short, long, value_name = "program", default_value = None)]
     eval: Option<String>,
 
-    #[arg()]
+    #[arg(value_name = "path/to/progfile", default_value = None)]
     prog_file: Option<String>,
 }
 
