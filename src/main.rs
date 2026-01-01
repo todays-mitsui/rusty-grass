@@ -12,8 +12,11 @@ struct Args {
     #[arg(short, long, default_value_t = false)]
     verbose: bool,
 
+    #[arg(short, long, default_value = None)]
+    eval: Option<String>,
+
     #[arg()]
-    prog_file: String,
+    prog_file: Option<String>,
 }
 
 fn main() {
@@ -23,12 +26,7 @@ fn main() {
         init_trace();
     }
 
-    let mut f = File::open(args.prog_file).expect("program file not found");
-
-    let mut prog_source = String::new();
-    f.read_to_string(&mut prog_source)
-        .expect("failed to read program file");
-
+    let prog_source = prog_source(args.eval, args.prog_file.as_deref());
     let prog = parse_prog(&prog_source).expect("failed to parse program");
 
     let mut vm = VM::new(&prog);
@@ -52,4 +50,18 @@ fn init_trace() {
         .with(filter)
         .with(fmt_layer)
         .init();
+}
+
+fn prog_source(eval: Option<String>, prog_file: Option<&str>) -> String {
+    if let Some(source) = eval {
+        source
+    } else if let Some(file_path) = prog_file {
+        let mut f = File::open(file_path).expect("program file not found");
+        let mut prog_source = String::new();
+        f.read_to_string(&mut prog_source)
+            .expect("failed to read program file");
+        prog_source
+    } else {
+        panic!("either --eval or program file must be provided");
+    }
 }
